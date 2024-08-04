@@ -1,0 +1,65 @@
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Coins {
+  id                              String     @id @default(auto()) @map("_id") @db.ObjectId
+  name                            String?
+  mint                            String?    @unique
+  nsfw                            Boolean?
+  symbol                          String?
+  creator                         String?
+  website                         String?
+  twitter                         String?
+  telegram                        String?
+  complete                        Boolean?
+  username                        String?
+  inverted                        String?
+  show_name                       Boolean?
+  image_uri                       String?
+  market_id                       String?
+  market_cap                      Float?
+  last_reply                      Int?
+  description                     String?
+  reply_count                     Int?
+  total_supply                    BigInt?
+  metadata_uri                    String?
+  raydium_pool                    String?
+  profile_image                   String?
+  bonding_curve                   String?
+  usd_market_cap                  Float?
+  last_candlestick                Candlestick?
+  created_timestamp               Int?
+  is_currently_live               Boolean?
+  virtual_sol_reserves            BigInt?
+  virtual_token_reserves          BigInt?
+  associated_bonding_curve        String?
+  king_of_the_hill_timestamp      Int?
+}
+
+model Filters {
+  id                              String     @id @default(auto()) @map("_id") @db.ObjectId
+  label                           String?
+  min                             Float?
+  max                             Float?
+  chatId                          Int
+  active                          Boolean   @default(true)
+}
+
+type Candlestick {
+  low                             Float?
+  mint                            String?
+  slot                            BigInt?
+  open                            Float?
+  high                            Float?
+  close                           Float?
+  volume                          BigInt?
+  is_5_min                        Boolean?
+  is_1_min                        Boolean?
+  timestamp                       Int?
+}
