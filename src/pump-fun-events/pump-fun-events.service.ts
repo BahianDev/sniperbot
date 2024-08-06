@@ -28,7 +28,7 @@ export class PumpFunEventsService {
     });
 
     this.ws.on('message', (message) => {
-      const data = JSON.parse(message);
+      const data = JSON.parse(message as any);
       console.log(data);
   
       if (data?.txType === 'create') {

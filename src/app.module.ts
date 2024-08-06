@@ -8,9 +8,19 @@ import { CoinsModule } from './coins/coins.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PumpFunModule } from './pump-fun/pump-fun.module';
 import { FiltersModule } from './filters/filters.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
-  imports: [TelegramModule, ScrapingModule, PumpFunEventsModule, CoinsModule, PrismaModule, PumpFunModule, FiltersModule],
+  imports: [
+    UsersModule,
+    TelegramModule,
+    ScrapingModule,
+    PumpFunEventsModule,
+    CoinsModule,
+    PrismaModule,
+    PumpFunModule,
+    FiltersModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
