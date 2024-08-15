@@ -15,7 +15,7 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     TelegramModule,
     ScrapingModule,
-    PumpFunEventsModule,
+    // PumpFunEventsModule,
     CoinsModule,
     PrismaModule,
     PumpFunModule,

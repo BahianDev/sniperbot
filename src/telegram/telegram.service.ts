@@ -6,6 +6,10 @@ import * as moment from 'moment';
 import { FiltersRepository } from 'src/filters/filters.repository';
 import { bufferCount } from 'rxjs';
 import { UsersService } from 'src/users/users.service';
+import fs from 'fs';
+import path from 'path';
+import axios from 'axios';
+import { PumpFunService } from 'src/pump-fun/pump-fun.service';
 
 @Injectable()
 export class TelegramService {
@@ -16,11 +20,13 @@ export class TelegramService {
   private addingMarketCapFilter = {};
   private addingCreationDateFilter = {};
   private states = {};
+  private tokenMetadata = [];
 
   constructor(
     private readonly coinRepo: CoinsRepository,
     private readonly filterRepo: FiltersRepository,
     private readonly usersService: UsersService,
+    private readonly pumpFunService: PumpFunService,
   ) {
     this.config = TelegramConfig;
     const token = this.config.TELEGRAM_TOKEN;
@@ -47,6 +53,7 @@ export class TelegramService {
             ],
             [{ text: 'Sniper', callback_data: '/coins/sniper' }],
             [{ text: 'Wallet', callback_data: '/wallet' }],
+            [{ text: 'Token', callback_data: '/token' }],
           ],
         },
       };
@@ -235,6 +242,31 @@ export class TelegramService {
         const text = 'Reply with the destination address';
         this.states[from] = { step: 'awaitingAddress' };
         await this.bot.sendMessage(message.chat.id, text);
+      }
+
+      if (optionSelected === '/token') {
+        const options = {
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: 'Create Token',
+                  callback_data: `/token/create`,
+                },
+              ],
+              [{ text: 'View Tokens', callback_data: '/token/view' }],
+            ],
+          },
+        };
+
+        this.bot.sendMessage(message.chat.id, 'Token Manager', options);
+      }
+
+      if (optionSelected === '/token/create') {
+        const text = 'Please type the name of the token:';
+        this.states[from] = { step: 'await/name' };
+
+        this.bot.sendMessage(message.chat.id, text);
       }
 
       if (optionSelected === '/coins/list_recently_created') {
@@ -613,6 +645,7 @@ export class TelegramService {
         const from = msg.from.id;
 
         const isNumeric = /^\d+(\.\d+)?$/.test(text);
+        console.log(this.states[from].step);
 
         if (isNumeric) {
           const priceFilter = this.addingPriceFilter[chatId];
@@ -693,6 +726,92 @@ export class TelegramService {
           return;
         }
 
+        if (this.states[from].step === 'await/name') {
+          let name = text;
+
+          this.tokenMetadata[from] = { name: name };
+          this.bot.sendMessage(chatId, 'Type the token symbol');
+          this.states[from] = { step: 'await/symbol' };
+        } else if (this.states[from].step === 'await/symbol') {
+          let symbol = text;
+
+          const newObject = {
+            ...this.tokenMetadata[from],
+            symbol,
+          };
+
+          this.tokenMetadata[from] = newObject;
+          this.bot.sendMessage(chatId, 'Type the token description');
+          this.states[from] = { step: 'await/description' };
+        } else if (this.states[from].step === 'await/description') {
+          let description = text;
+
+          const newObject = {
+            ...this.tokenMetadata[from],
+            description,
+          };
+
+          this.tokenMetadata[from] = newObject;
+          this.bot.sendMessage(chatId, 'Type Twitter URL:');
+          this.states[from] = { step: 'await/twitter' };
+        } else if (this.states[from].step === 'await/twitter') {
+          let twitter = text;
+          const newObject = {
+            ...this.tokenMetadata[from],
+            twitter,
+          };
+          this.tokenMetadata[from] = newObject;
+          this.bot.sendMessage(chatId, 'Type Telegram URL:');
+          this.states[from] = { step: 'await/telegram' };
+        } else if (this.states[from].step === 'await/telegram') {
+          let telegram = text;
+          const newObject = {
+            ...this.tokenMetadata[from],
+            telegram,
+          };
+          this.tokenMetadata[from] = newObject;
+          this.bot.sendMessage(chatId, 'Type Website URL:');
+          this.states[from] = { step: 'await/website' };
+        } else if (this.states[from].step === 'await/website') {
+          let website = text;
+          const newObject = {
+            ...this.tokenMetadata[from],
+            website,
+          };
+          this.tokenMetadata[from] = newObject;
+          this.bot.sendMessage(chatId, 'Send the logo image:');
+          this.states[from] = { step: 'await/file' };
+        } else if (this.states[from].step === 'await/file') {
+          const photo = msg.photo[msg.photo.length - 1];
+          const fileId = photo.file_id;
+
+          const fileLink = await this.bot.getFileLink(fileId);
+          const response = await axios.get(fileLink, {
+            responseType: 'arraybuffer',
+          });
+          const fileBuffer = Buffer.from(response.data, 'binary');
+          const fileBlob = new Blob([response.data], {
+            type: response.headers['content-type'],
+          });
+
+          const user = await this.usersService.get(String(from));
+
+          const newObject = {
+            ...this.tokenMetadata[from],
+            file: fileBlob,
+            publickey: user.address,
+            pk: user.pk,
+          };
+          this.tokenMetadata[from] = newObject;
+
+          console.log(newObject);
+          const textResponse = this.pumpFunService.createToken(
+            this.tokenMetadata[from],
+          );
+          this.bot.sendMessage(chatId, `Token created successfully\n\n${textResponse}`);
+
+        }
+
         if (this.states[from].step === 'awaitingAddress') {
           const user = await this.usersService.get(String(from));
 
@@ -704,10 +823,11 @@ export class TelegramService {
             this.states[from] = { step: 'awaitingAddress' };
           }
 
-          console.log(text)
-
-          const signature = await this.usersService.withdraw(String(from), text);
-          const textResponse = `Transaction sent successfully\n\n${signature}`
+          const signature = await this.usersService.withdraw(
+            String(from),
+            text,
+          );
+          const textResponse = `Transaction sent successfully\n\n${signature}`;
           this.bot.sendMessage(chatId, textResponse);
         }
       } catch (error) {
