@@ -2,19 +2,21 @@ datasource db {
   provider = "mongodb"
   url      = env("DATABASE_URL")
 }
+
 generator client {
   provider = "prisma-client-js"
 }
 
 model User {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  telegramId String   @unique
-  address    String
-  pk         String
-  referredBy String?  @db.ObjectId
-  referrals  User[]   @relation("Referrals")
-  revenue    Float    @default(0.0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  UserRef User? @relation("Referrals", fields: [referredBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  telegramId   String   @unique
+  address      String
+  pk           String
+  referredBy   String?  @db.ObjectId
+  referrals    User[]   @relation("Referrals")
+  revenue      Float    @default(0.0)
+  referralCode String   @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  UserRef      User?    @relation("Referrals", fields: [referredBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }

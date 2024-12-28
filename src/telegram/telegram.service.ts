@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as TelegramBot from 'node-telegram-bot-api';
 import { TelegramConfig } from '../../config';
 import { UsersService } from 'src/users/users.service';
+import { ReferralService } from 'src/referral/referral.service';
 
 @Injectable()
 export class TelegramService {
@@ -9,7 +10,10 @@ export class TelegramService {
   private config: typeof TelegramConfig;
   private readonly logger = new Logger(TelegramService.name);
 
-  constructor(private readonly usersService: UsersService) {
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly referralService: ReferralService,
+  ) {
     this.config = TelegramConfig;
     const token = this.config.TELEGRAM_TOKEN;
 
@@ -158,6 +162,9 @@ export class TelegramService {
       if (optionSelected === '/referrals') {
         const chatId = from;
 
+        const { direct, indirect } =
+          await this.referralService.getReferralsCount('676f7eeadf630d94750fa1fa');
+
         const options = {
           reply_markup: {
             inline_keyboard: [
@@ -165,6 +172,12 @@ export class TelegramService {
                 {
                   text: `🪂 Selected Rewards Wallet: 12mK...3759`,
                   callback_data: '/',
+                },
+              ],
+              [
+                {
+                  text: '📩 Enter referral code',
+                  callback_data: '/enter_referral',
                 },
               ],
               [
@@ -181,7 +194,7 @@ export class TelegramService {
           `💰🐢 TurboTurtle offers an attractive multi-level referral program where you can earn rewards from direct and indirect referrals. You'll receive 25% of all fees from your direct referrals, and additional percentages from indirect referrals.\n\n` +
           `This framework not only promotes community development but also substantially boosts the fee percentage for all participants.\n\n` +
           `--------- Your Referrals (updated every 15 min)\n` +
-          `• Users referred: 9 (direct: 1, indirect: 8)\n` +
+          `• Users referred: ${direct + indirect} (direct: ${direct}, indirect: ${indirect})\n` +
           `• Total rewards: 0.4714 SOL ($64.85)\n` +
           `• Total paid: 0.4688 SOL ($64.51)\n` +
           `• Total unpaid: 0.0025 SOL ($0.35)\n\n` +
@@ -199,14 +212,42 @@ export class TelegramService {
           },
         );
       }
+
+      if (optionSelected === '/enter_referral') {
+        const chatId = from;
+
+        const options = {
+          reply_markup: {
+            force_reply: true,
+          },
+        };
+
+        const text = `Please enter your referral code (Pls, Reply):`;
+
+        this.bot.sendMessage(chatId, text, options);
+      }
     });
 
     this.bot.on('message', async (msg) => {
       try {
         const chatId = msg.chat.id;
         const text = msg.text;
-        const from = msg.from.id;
+        const from = String(msg.from.id);
+        const replyToMessage = msg.reply_to_message;
 
+        if (
+          replyToMessage &&
+          replyToMessage.text ===
+            'Please enter your referral code (Pls, Reply):'
+        ) {
+          const referralCode = text;
+          await this.referralService.referUser(from, referralCode);
+
+          this.bot.sendMessage(
+            chatId,
+            `Thank you! Your referral code "${referralCode}" has been saved.`,
+          );
+        }
       } catch (error) {
         console.log(error);
       }

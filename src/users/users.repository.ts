@@ -9,7 +9,7 @@ export class UsersRepository {
 
   getAlluUsers = this.prisma.user.findMany;
 
-  getUserById = this.prisma.user.findUnique;
+  get = this.prisma.user.findUnique;
 
   updateUser = this.prisma.user.update;
 

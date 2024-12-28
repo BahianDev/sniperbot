@@ -27,7 +27,7 @@ export class ReferralService {
       }
 
       // Move para o próximo referenciador
-      const user = await this.userRepository.getUserById({
+      const user = await this.userRepository.get({
         where: { id: currentUser },
         select: { referredBy: true },
       });
@@ -35,5 +35,44 @@ export class ReferralService {
       currentUser = user?.referredBy || null;
       level++;
     }
+  }
+
+  async referUser(telegramId: string, referredByCode: string) {
+    const referringUser = await this.userRepository.get({
+      where: { referralCode: referredByCode },
+    });
+
+    if (!referringUser) {
+      throw new Error('Referral code not found');
+    }
+
+    const updatedUser = await this.userRepository.updateUser({
+      where: { telegramId: telegramId },
+      data: {
+        referredBy: referringUser.id,
+      },
+    });
+
+    return updatedUser;
+  }
+
+  async getReferralsCount(userId: string) {
+    // Obter referrals diretos
+    const directReferrals = await this.userRepository.getAlluUsers({
+      where: { referredBy: userId },
+    });
+
+    // IDs dos referrals diretos
+    const directReferralIds = directReferrals.map((referral) => referral.id);
+
+    // Obter referrals indiretos (nível 2+)
+    const indirectReferrals = await this.userRepository.getAlluUsers({
+      where: { referredBy: { in: directReferralIds } },
+    });
+
+    return {
+      direct: directReferrals.length,
+      indirect: indirectReferrals.length,
+    };
   }
 }

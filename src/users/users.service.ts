@@ -19,6 +19,11 @@ export class UsersService {
   private logger = new Logger(UsersService.name);
   constructor(private readonly usersRepository: UsersRepository) {}
 
+  private generateReferralCode(): string {
+    const length = 8; // Defina o tamanho do código
+    return Array.from({ length }, () => Math.floor(Math.random() * 10)).join('');
+  }
+
   async create(telegramId: string) {
     const wallet = Keypair.generate();
 
@@ -27,6 +32,7 @@ export class UsersService {
         telegramId,
         address: wallet.publicKey.toString(),
         pk: bs58.default.encode(wallet.secretKey),
+        referralCode: this.generateReferralCode()
       },
     });
 
@@ -36,7 +42,7 @@ export class UsersService {
   }
 
   async get(telegramId: string) {
-    const user = await this.usersRepository.getUserById({
+    const user = await this.usersRepository.get({
       where: {
         telegramId,
       },
@@ -46,7 +52,7 @@ export class UsersService {
   }
 
   async withdraw(telegramId: string, receiver: string) {
-    const user = await this.usersRepository.getUserById({
+    const user = await this.usersRepository.get({
       where: {
         telegramId,
       },
@@ -87,7 +93,7 @@ export class UsersService {
   }
 
   async reset(telegramId: string) {
-    const user = await this.usersRepository.getUserById({
+    const user = await this.usersRepository.get({
       where: {
         telegramId,
       },

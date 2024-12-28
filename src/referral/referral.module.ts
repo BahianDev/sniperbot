@@ -5,6 +5,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 
 @Module({
   providers: [ReferralService, UsersRepository, PrismaService],
+  exports: [ReferralService],
   controllers: [],
 })
 export class ReferralModule {}
