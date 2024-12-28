@@ -1,5 +1,4 @@
-
-import 'dotenv/config'
+import 'dotenv/config';
 import { env } from 'process';
 
 const { TELEGRAM_TOKEN } = env;
